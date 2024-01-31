@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgdb-deployment
+  labels:
+    app: pgdb
+spec:
+  
+  selector:
+    matchLabels:
+      app: pgdb
+  template:
+    metadata:
+      labels:
+        app: pgdb
+    spec:
+      containers:
+      - name: pgdb
+        image: postgres:16.1-bookworm
+        env:
+          - name: POSTGRES_USER
+            value: "dbadmin"
+          - name: POSTGRES_PASSWORD
+            value: "admin4test"
+          - name: POSTGRES_DB
+            value: postgres
+          - name: PGDATA
+            value: "/var/lib/postgresql/data"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgresdata
+        - name: init-volume
+          mountPath: /docker-entrypoint-initdb.d
+
+      volumes:
+        - name: postgresdata
+          persistentVolumeClaim:
+            claimName: postgres-volume-claim    
+        - name: init-volume
+          configMap:
+            name: pginit-config    

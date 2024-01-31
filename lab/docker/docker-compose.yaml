@@ -15,3 +15,10 @@ services:
     ports:
       - 5432:5432
 
+  api:
+     image: quarkus/quiz-api-jvm:1
+     container_name: api
+     depends_on:
+     - pgdblocal
+     ports:
+       - 8080:8080

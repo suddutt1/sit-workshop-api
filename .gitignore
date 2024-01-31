@@ -43,3 +43,4 @@ nb-configuration.xml
 /.quarkus/cli/plugins/
 
 src/main/resources/*.pem
+lab/docker/data
