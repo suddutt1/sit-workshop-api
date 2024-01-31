@@ -1,0 +1,26 @@
+version: '3.1'
+
+services:
+  pgdblocal:
+    image: postgres:16.1-bookworm
+    container_name: pgdblocal
+    environment:
+      POSTGRES_USER: dbadmin
+      POSTGRES_PASSWORD: admin4test
+      POSTGRES_DB: postgres
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
+  api:
+     image: quarkus/quiz-api:1.0
+     container_name: api
+     depends_on:
+     - pgdblocal
+     environment:
+      LANG: C
+     ports:
+       - 8080:8080
