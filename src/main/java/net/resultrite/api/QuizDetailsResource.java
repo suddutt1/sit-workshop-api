@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -58,7 +58,7 @@ public class QuizDetailsResource {
     }
     @GET
     @RolesAllowed("user")
-    @Path("get-all-quizDetails")
+    @Path("get-all-quizDetails1")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllQuizes(@Context SecurityContext context) {
         if (context.getUserPrincipal() == null) {
@@ -156,4 +156,62 @@ public class QuizDetailsResource {
             return Response.serverError().build();
         }
     }
+
+    @GET
+    @RolesAllowed("user")
+    @Path("get-all-quizDetails")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getAllQuize(@Context SecurityContext context) {
+        if (context.getUserPrincipal() == null) {
+            logger.error("User unauthorized");
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Unauthorized").build();
+        }
+        
+        List<QuizFinalDTO> quizFinalDTOList = new ArrayList<>();
+        List<QuizDetails> quizes = QuizDetails.listAll();
+       
+       
+        for (QuizDetails quiz : quizes){
+
+            System.out.println("--------------quiz"+quiz.quiz_id);
+            
+            List<QuizQuestion> questions = QuizQuestion.find("quiz_id = ?1 ORDER BY create_ts asc", quiz.quiz_id)
+                    .list();
+                    List<QuizQuestion> quizQuestionList = new ArrayList<>();
+                    for (QuizQuestion quizQuestion : questions){
+                        QuizQuestion singleQuizQuestion = convertToQuizQuestion(quizQuestion);
+                        JsonNode quizOption = singleQuizQuestion.getOptions();
+                       
+                        singleQuizQuestion.setOptions(quizOption);
+                        quizQuestionList.add(singleQuizQuestion);                                      
+                    }   
+                    QuizFinalDTO quizFinal = new QuizFinalDTO();
+                    quizFinal.setQuiz_id(quiz.getQuiz_id());
+                    quizFinal.setTopic(quiz.getTitle());
+                    quizFinal.setQuizQuestionFinal(quizQuestionList);
+                    quizFinalDTOList.add(quizFinal);
+
+                    System.out.println("quiz.getQuiz_id()--"+quiz.getQuiz_id());
+                    System.out.println("quiz.getTitle()--"+quiz.getTitle());
+        }
+       
+        return Response.ok(quizFinalDTOList).build();
+    }
+
+
+    public QuizQuestion convertToQuizQuestion(QuizQuestion quizQuestion) {
+
+        QuizQuestion quizQuestion1 = new QuizQuestion();
+        quizQuestion1.setQuiz_id(quizQuestion.getQuiz_id());
+        quizQuestion1.setQuestion_id(quizQuestion.getQuestion_id());
+        quizQuestion1.setAnswer(quizQuestion.getAnswer());
+        quizQuestion1.setAnswer_type(quizQuestion.getAnswer_type());
+        quizQuestion1.setOptions(quizQuestion.getOptions());
+        quizQuestion1.setScore(quizQuestion.getScore());
+        quizQuestion1.setUpdate_ts(quizQuestion.getUpdate_ts());
+        quizQuestion1.setCreate_ts(quizQuestion.getCreate_ts());
+    
+
+    return quizQuestion1;
+}
 }
