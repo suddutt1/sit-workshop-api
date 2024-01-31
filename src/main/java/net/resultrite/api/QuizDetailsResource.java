@@ -1,5 +1,18 @@
 package net.resultrite.api;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+//import jakarta.ws.rs.core.Response;
+import java.util.List;
+
+import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -12,21 +25,6 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
-import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-//import jakarta.ws.rs.core.Response;
-import java.util.List;
-import java.util.ArrayList;
 import jakarta.ws.rs.core.SecurityContext;
 import net.resultrite.dto.QuizDetailsDTO;
 import net.resultrite.dto.QuizFinalDTO;
@@ -51,11 +49,12 @@ public class QuizDetailsResource {
             return Response.status(Response.Status.UNAUTHORIZED).entity("Unauthorized").build();
         }
         QuizDetails quiz = QuizDetails.findById(quiz_id);
-        if (quiz.getOwner_email().equals(jwt.getName())){
+        if (quiz.getOwner_email().equals(jwt.getName())) {
             return Response.ok(quiz).build();
         }
         return Response.status(Response.Status.UNAUTHORIZED).entity("Unauthorized").build();
     }
+
     @GET
     @RolesAllowed("user")
     @Path("get-all-quizDetails1")
@@ -66,28 +65,24 @@ public class QuizDetailsResource {
             return Response.status(Response.Status.UNAUTHORIZED).entity("Unauthorized").build();
         }
         QuizFinalDTO quizFinal = new QuizFinalDTO();
-       // QuizQuestion[] quizQuestionArr;
         List<QuizQuestion> quizQuestionList = new ArrayList<>();
         List<QuizDetails> quizes = QuizDetails.listAll();
-        ObjectMapper objectMapper = new ObjectMapper();
-        for (QuizDetails quiz : quizes){
+        for (QuizDetails quiz : quizes) {
             List<QuizQuestion> questions = QuizQuestion.find("quiz_id = ?1 ORDER BY create_ts asc", quiz.quiz_id)
                     .list();
-                    for (QuizQuestion quizQuestion : questions){
-                        JsonNode quizOption = quizQuestion.getOptions();
-                        QuizOptionDTO[] optionsArray = objectMapper.convertValue(quizQuestion.getOptions().get("options"), QuizOptionDTO[].class);
-                        System.out.println("optionsArray--"+optionsArray);
-                        quizQuestion.setOptions(quizOption);
-                        quizQuestionList.add(quizQuestion);
-                        
-                    }   
-                    quizFinal.setQuiz_id(quiz.getQuiz_id()); 
-                    quizFinal.setTopic(quiz.getTitle());  
-                    quizFinal.setQuizQuestionFinal(quizQuestionList);
+            for (QuizQuestion quizQuestion : questions) {
+                JsonNode quizOption = quizQuestion.getOptions();
+                quizQuestion.setOptions(quizOption);
+                quizQuestionList.add(quizQuestion);
+
+            }
+            quizFinal.setQuiz_id(quiz.getQuiz_id());
+            quizFinal.setTopic(quiz.getTitle());
+            quizFinal.setQuizQuestionFinal(quizQuestionList);
         }
         return Response.ok(quizFinal).build();
     }
-    
+
     @POST
     @RolesAllowed("user")
     @Path("create-quiz")
@@ -96,40 +91,40 @@ public class QuizDetailsResource {
     @Transactional
     public Response createQuiz(QuizDetailsDTO quizDetailsDTO, @Context SecurityContext context) {
         try {
-            if (context.getUserPrincipal()==null){
+            if (context.getUserPrincipal() == null) {
                 logger.error("User unauthorized");
-               return Response.status(401, "Unauthozied").build();
+                return Response.status(401, "Unauthozied").build();
             }
-            long count=QuizDetails.findAll().count();
-            count=count+1;
+            long count = QuizDetails.findAll().count();
+            count = count + 1;
             QuizDetails quizDetails = new QuizDetails();
             quizDetails.setTitle(quizDetailsDTO.getTopic());
-            String quizID=String.format("Q%06d",count);
+            String quizID = String.format("Q%06d", count);
             quizDetails.setQuiz_id(quizID);
             quizDetails.setStatus("OPEN");
-            Timestamp ts =Timestamp.valueOf(LocalDateTime.now());
+            Timestamp ts = Timestamp.valueOf(LocalDateTime.now());
             quizDetails.setCreate_ts(ts);
             quizDetails.setUpdate_ts(ts);
             quizDetails.setOwner_email(jwt.getName());
             quizDetails.persist();
-            logger.info("Quiz Created "+ quizDetails.getQuiz_id());
+            logger.info("Quiz Created " + quizDetails.getQuiz_id());
             int qid = 0;
             ObjectMapper objectMapper = new ObjectMapper();
-            String[] defaultAns = {""};
+            String[] defaultAns = { "" };
             JsonNode answer = objectMapper.convertValue(defaultAns, JsonNode.class);
 
-           // return Response.status(200, "Created quiz").build();
-            for ( QuizQuestionDTO question : quizDetailsDTO.getQuestions()){
+            // return Response.status(200, "Created quiz").build();
+            for (QuizQuestionDTO question : quizDetailsDTO.getQuestions()) {
                 qid++;
                 QuizQuestion saveObject = new QuizQuestion();
                 saveObject.setQuiz_id(quizID);
-                String questionId = String.format("Q%03d",qid);
+                String questionId = String.format("Q%03d", qid);
                 saveObject.setQuestion_id(questionId);
                 saveObject.setAnswer_type("SINGLE");
                 List<QuizOptionDTO> newList = new ArrayList<QuizOptionDTO>();
-                int optId=1;
-                for (QuizOptionDTO opt:question.getOptions()){
-                    opt.setOptId(String.format("%s_%d",questionId,optId));
+                int optId = 1;
+                for (QuizOptionDTO opt : question.getOptions()) {
+                    opt.setOptId(String.format("%s_%d", questionId, optId));
                     optId++;
                     newList.add(opt);
                 }
@@ -141,7 +136,7 @@ public class QuizDetailsResource {
                 saveObject.setCreate_ts(ts);
                 saveObject.setUpdate_ts(ts);
                 saveObject.persist();
-                //saveObject.setOptions(null);
+                // saveObject.setOptions(null);
             }
             // Build the response DTO
             SaveMessage saveResponse = new SaveMessage();
@@ -166,38 +161,35 @@ public class QuizDetailsResource {
             logger.error("User unauthorized");
             return Response.status(Response.Status.UNAUTHORIZED).entity("Unauthorized").build();
         }
-        
+
         List<QuizFinalDTO> quizFinalDTOList = new ArrayList<>();
         List<QuizDetails> quizes = QuizDetails.listAll();
-       
-       
-        for (QuizDetails quiz : quizes){
 
-            System.out.println("--------------quiz"+quiz.quiz_id);
-            
+        for (QuizDetails quiz : quizes) {
+
+            logger.info("--------------quiz" + quiz.quiz_id);
+
             List<QuizQuestion> questions = QuizQuestion.find("quiz_id = ?1 ORDER BY create_ts asc", quiz.quiz_id)
                     .list();
-                    List<QuizQuestion> quizQuestionList = new ArrayList<>();
-                    for (QuizQuestion quizQuestion : questions){
-                        QuizQuestion singleQuizQuestion = convertToQuizQuestion(quizQuestion);
-                        JsonNode quizOption = singleQuizQuestion.getOptions();
-                       
-                        singleQuizQuestion.setOptions(quizOption);
-                        quizQuestionList.add(singleQuizQuestion);                                      
-                    }   
-                    QuizFinalDTO quizFinal = new QuizFinalDTO();
-                    quizFinal.setQuiz_id(quiz.getQuiz_id());
-                    quizFinal.setTopic(quiz.getTitle());
-                    quizFinal.setQuizQuestionFinal(quizQuestionList);
-                    quizFinalDTOList.add(quizFinal);
+            List<QuizQuestion> quizQuestionList = new ArrayList<>();
+            for (QuizQuestion quizQuestion : questions) {
+                QuizQuestion singleQuizQuestion = convertToQuizQuestion(quizQuestion);
+                JsonNode quizOption = singleQuizQuestion.getOptions();
 
-                    System.out.println("quiz.getQuiz_id()--"+quiz.getQuiz_id());
-                    System.out.println("quiz.getTitle()--"+quiz.getTitle());
+                singleQuizQuestion.setOptions(quizOption);
+                quizQuestionList.add(singleQuizQuestion);
+            }
+            QuizFinalDTO quizFinal = new QuizFinalDTO();
+            quizFinal.setQuiz_id(quiz.getQuiz_id());
+            quizFinal.setTopic(quiz.getTitle());
+            quizFinal.setQuizQuestionFinal(quizQuestionList);
+            quizFinalDTOList.add(quizFinal);
+            logger.info("quiz.getQuiz_id()--" + quiz.getQuiz_id());
+            logger.info("quiz.getTitle()--" + quiz.getTitle());
         }
-       
+
         return Response.ok(quizFinalDTOList).build();
     }
-
 
     public QuizQuestion convertToQuizQuestion(QuizQuestion quizQuestion) {
 
@@ -210,8 +202,7 @@ public class QuizDetailsResource {
         quizQuestion1.setScore(quizQuestion.getScore());
         quizQuestion1.setUpdate_ts(quizQuestion.getUpdate_ts());
         quizQuestion1.setCreate_ts(quizQuestion.getCreate_ts());
-    
 
-    return quizQuestion1;
-}
+        return quizQuestion1;
+    }
 }
