@@ -38,6 +38,8 @@ docker image pull postgres:16.1-bookworm
 docker compose up -d 
 docker compose ps
 docker compose restart api
+# Optionally you can check the api logs 
+docker logs api 
 ```
 
 6. Open the link [http://localhost:8080/q/swagger-ui/] in the a browser
