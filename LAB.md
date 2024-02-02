@@ -42,7 +42,7 @@ docker compose restart api
 docker logs api 
 ```
 
-6. Open the link [http://localhost:8080/q/swagger-ui/] in the a browser
+6. Open the link [http://localhost:8080/q/swagger-ui/] (http://localhost:8080/q/swagger-ui/) in the a browser
 
 7. (Optional) If your browser does not show any thing run the following coammand
 ```
